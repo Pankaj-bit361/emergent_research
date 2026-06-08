@@ -1,0 +1,56 @@
+===== 1. Is there ANY LLM-related process in this container? =====
+Nothing found - container has NO LLM running locally
+
+===== 2. What processes ARE running? =====
+UID          PID    PPID  C STIME TTY          TIME CMD
+root           1       0  0 10:26 ?        00:00:00 /bin/bash /entrypoint.sh
+root          13       1  0 10:26 ?        00:00:02 /opt/plugins-venv/bin/python /opt/plugins-venv/bin/e1_monitor af0940da-02af-4fbe-94c6-9da211087a76 https://demobackend.emergentagent.com --interval 1
+root          16       1  0 10:26 ?        00:00:00 /bin/bash /entrypoint.sh
+root          20      16  0 10:26 ?        00:00:01 node /usr/bin/mongodb-mcp-server --transport http --httpHost=0.0.0.0 --httpPort=8020 --readOnly
+root          22       1  0 10:26 ?        00:00:16 /opt/plugins-venv/bin/python /opt/plugins-venv/bin/uvicorn plugins.tools.agent.server:app --host 0.0.0.0 --port 8010 --workers 1 --no-access-log
+root          39       1  0 10:26 ?        00:00:00 /usr/bin/python3 /usr/bin/supervisord -c /etc/supervisor/supervisord.conf
+root         209      39  0 10:27 ?        00:00:00 nginx: master process /usr/sbin/nginx -g daemon off; -c /etc/nginx/nginx-code-server.conf
+root         211      39  0 10:27 ?        00:00:00 /usr/lib/code-server/lib/node /usr/lib/code-server --config /root/.config/code-server/config.yaml /app
+root         212      39  0 10:27 ?        00:00:00 node /bin/yarn start
+root         213      39  0 10:27 ?        00:00:06 /usr/bin/mongod --bind_ip_all
+root         219     209  0 10:27 ?        00:00:00 nginx: worker process
+root         239     212  0 10:27 ?        00:00:00 /bin/sh -c craco start
+root         240     239  0 10:27 ?        00:00:00 /usr/bin/node /app/frontend/node_modules/.bin/craco start
+root         247     240  1 10:27 ?        00:00:36 /usr/bin/node /app/frontend/node_modules/@craco/craco/dist/scripts/start.js
+root         323     211  0 10:27 ?        00:00:00 /usr/lib/code-server/lib/node /usr/lib/code-server/out/node/entry
+root         763      39  0 10:35 ?        00:00:00 /root/.venv/bin/python /root/.venv/bin/uvicorn server:app --host 0.0.0.0 --port 8001 --workers 1 --reload
+root         764     763  0 10:35 ?        00:00:00 /root/.venv/bin/python -c from multiprocessing.resource_tracker import main;main(4)
+root         765     763  0 10:35 ?        00:00:03 /root/.venv/bin/python -c from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=5, pipe_handle=7) --multiprocessing-fork
+root        1125      22  0 11:01 ?        00:00:00 /bin/bash /tmp/tmplors577e.sh
+root        1130    1125  0 11:01 ?        00:00:00 ps -ef
+root        1132    1125  0 11:01 ?        00:00:00 head -30
+
+===== 3. Are there any API keys / LLM env vars in the container? =====
+STRIPE_API_KEY=<REDACTED>
+
+===== 4. Search for ANY file that might have prompt/context traces =====
+/root/.venv/lib/python3.11/site-packages/litellm/proxy/test_prompts/test_hello_world_prompt.prompt
+
+===== 5. Recent file activity (last 5 min) - anything written related to agent? =====
+/tmp/tmplors577e.sh
+/var/log/monitor.log
+/var/log/e1_agent.log
+/var/log/mongodb.out.log
+/root/.emergent/tool_outputs/view_file-toolu_01CY37hBFwoHXCtYNt3Tji2Z.output
+
+===== 6. Network connections from this container =====
+State Recv-Q Send-Q Local Address:Port   Peer Address:Port Process                            
+ESTAB 0      0          127.0.0.1:32948     127.0.0.1:27017 users:(("python",pid=765,fd=13))  
+ESTAB 0      0          127.0.0.1:32962     127.0.0.1:27017 users:(("python",pid=765,fd=12))  
+ESTAB 0      0      10.208.138.70:8010   10.64.128.71:41200 users:(("uvicorn",pid=22,fd=15))  
+ESTAB 0      0      10.208.138.70:8010   10.64.128.67:46720 users:(("uvicorn",pid=22,fd=13))  
+ESTAB 0      0          127.0.0.1:60556     127.0.0.1:8010  users:(("e1_monitor",pid=13,fd=3))
+ESTAB 0      0      10.208.138.70:3000  10.208.130.77:41634 users:(("node",pid=247,fd=19))    
+ESTAB 0      0      10.208.138.70:33184  34.102.203.0:443   users:(("e1_monitor",pid=13,fd=4))
+ESTAB 0      0          127.0.0.1:27017     127.0.0.1:32948 users:(("mongod",pid=213,fd=51))  
+ESTAB 0      0          127.0.0.1:32936     127.0.0.1:27017 users:(("python",pid=765,fd=11))  
+ESTAB 0      0          127.0.0.1:8010      127.0.0.1:60556 users:(("uvicorn",pid=22,fd=12))  
+ESTAB 0      0      10.208.138.70:8010   10.64.128.71:41180 users:(("uvicorn",pid=22,fd=14))  
+ESTAB 0      0          127.0.0.1:27017     127.0.0.1:32936 users:(("mongod",pid=213,fd=49))  
+ESTAB 0      0          127.0.0.1:27017     127.0.0.1:32962 users:(("mongod",pid=213,fd=53))
+Exit code: 0

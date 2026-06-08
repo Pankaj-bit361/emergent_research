@@ -1,0 +1,87 @@
+===== F. Look at the agent plugin server source - reveals architecture =====
+/opt/plugins-venv/lib/python3.11/site-packages/browser_use/agent/cloud_events.py
+/opt/plugins-venv/lib/python3.11/site-packages/browser_use/agent/gif.py
+/opt/plugins-venv/lib/python3.11/site-packages/browser_use/agent/judge.py
+/opt/plugins-venv/lib/python3.11/site-packages/browser_use/agent/message_manager/service.py
+/opt/plugins-venv/lib/python3.11/site-packages/browser_use/agent/message_manager/utils.py
+/opt/plugins-venv/lib/python3.11/site-packages/browser_use/agent/message_manager/views.py
+/opt/plugins-venv/lib/python3.11/site-packages/browser_use/agent/prompts.py
+/opt/plugins-venv/lib/python3.11/site-packages/browser_use/agent/service.py
+/opt/plugins-venv/lib/python3.11/site-packages/browser_use/agent/system_prompts/__init__.py
+/opt/plugins-venv/lib/python3.11/site-packages/browser_use/agent/variable_detector.py
+
+===== G. Look at the agent server entry point =====
+__init__.py
+__pycache__
+base.py
+bash_tools.py
+browser_use_runner.py
+config.py
+custom_mcp_server.py
+descriptions.py
+image_handler.py
+impl_ato.py
+logger.py
+mcp_server.py
+mcp_tools.py
+middleware
+monitor.py
+parser.py
+qabot_script_handler.py
+screenshot_tools.py
+server.py
+skill_tools.py
+start_mcp_server.sh
+system_tools.py
+todo_tools.py
+traj_processor.py
+ts_playwright_runner.py
+utils.py
+
+===== H. Does the agent server log raw LLM requests? =====
+/opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/browser_use_runner.py
+/opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/descriptions.py
+/opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/mcp_tools.py
+/opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/middleware/mcp_stringify_fix.py
+/opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/skill_tools.py
+
+===== I. Sample tool output content (let's actually SEE one) =====
+===== 1. Is there ANY LLM-related process in this container? =====
+Nothing found - container has NO LLM running locally
+
+===== 2. What processes ARE running? =====
+UID          PID    PPID  C STIME TTY          TIME CMD
+root           1       0  0 10:26 ?        00:00:00 /bin/bash /entrypoint.sh
+root          13       1  0 10:26 ?        00:00:02 /opt/plugins-venv/bin/python /opt/plugins-venv/bin/e1_monitor af0940da-02af-4fbe-94c6-9da211087a76 https://demobackend.emergentagent.com --interval 1
+root          16       1  0 10:26 ?        00:00:00 /bin/bash /entrypoint.sh
+root          20      16  0 10:26 ?        00:00:01 node /usr/bin/mongodb-mcp-server --transport http --httpHost=0.0.0.0 --httpPort=8020 --readOnly
+root          22       1  0 10:26 ?        00:00:16 /opt/plugins-venv/bin/python /opt/plugins-venv/bin/uvicorn plugins.tools.agent.server:app --host 0.0.0.0 --port 8010 --workers 1 --no-access-log
+root          39       1  0 10:26 ?        00:00:00 /usr/bin/python3 /usr/bin/supervisord -c /etc/supervisor/supervisord.conf
+root         209      39  0 10:27 ?        00:00:00 nginx: master process /usr/sbin/nginx -g daemon off; -c /etc/nginx/nginx-code-server.conf
+root         211      39  0 10:27 ?        00:00:00 /usr/lib/code-server/lib/node /usr/lib/code-server --config /root/.config/code-server/config.yaml /app
+root         212      39  0 10:27 ?        00:00:00 node /bin/yarn start
+root         213      39  0 10:27 ?        00:00:06 /usr/bin/mongod --bind_ip_all
+root         219     209  0 10:27 ?        00:00:00 nginx: worker process
+root         239     212  0 10:27 ?        00:00:00 /bin/sh -c craco start
+root         240     239  0 10:27 ?        00:00:00 /usr/bin/node /app/frontend/node_modules/.bin/craco start
+root         247     240  1 10:27 ?        00:00:36 /usr/bin/node /app/frontend/node_modules/@craco/craco/dist/scripts/start.js
+root         323     211  0 10:27 ?        00:00:00 /usr/lib/code-server/lib/node /usr/lib/code-server/out/node/entry
+root         763      39  0 10:35 ?        00:00:00 /root/.venv/bin/python /root/.venv/bin/uvicorn server:app --host 0.0.0.0 --port 8001 --workers 1 --reload
+root         764     763  0 10:35 ?        00:00:00 /root/.venv/bin/python -c from multiprocessing.resource_tracker import main;main(4)
+root         765     763  0 10:35 ?        00:00:03 /root/.venv/bin/python -c from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=5, pipe_handle=7) --multiprocessing-fork
+root        1125      22  0 11:01 ?        00:00:00 /bin/bash /tmp/tmplors577e.sh
+root        1130    1125  0 11:01 ?        00:00:00 ps -ef
+root        1132    1125  0 11:01 ?        00:00:00 head -30
+
+===== 3. Are there any API keys / LLM env vars in the container? =====
+STRIPE_API_KEY=<REDACTED>
+
+
+===== J. Git history - every turn commits! =====
+08d89a7 auto-commit for ad1830ac-fd53-43a1-a33b-80a6e6df8754
+31ec97a auto-commit for 1ad18c9c-d3aa-4b5f-826f-fcb624dc07ab
+91c22ec Initial commit
+
+===== K. Number of git commits = number of turns =====
+3
+Exit code: 0

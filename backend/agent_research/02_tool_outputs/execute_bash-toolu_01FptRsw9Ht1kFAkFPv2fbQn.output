@@ -1,0 +1,159 @@
+===== L. How big is the agent codebase ====
+     0 /opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/__init__.py
+    21 /opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/base.py
+   630 /opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/bash_tools.py
+   408 /opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/browser_use_runner.py
+    50 /opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/config.py
+   188 /opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/custom_mcp_server.py
+   414 /opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/descriptions.py
+   103 /opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/image_handler.py
+  1157 /opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/impl_ato.py
+    33 /opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/logger.py
+   203 /opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/mcp_server.py
+  3183 /opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/mcp_tools.py
+   111 /opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/monitor.py
+    54 /opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/parser.py
+   718 /opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/qabot_script_handler.py
+   149 /opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/screenshot_tools.py
+   717 /opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/server.py
+   157 /opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/skill_tools.py
+   126 /opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/system_tools.py
+   289 /opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/todo_tools.py
+   162 /opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/traj_processor.py
+   364 /opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/ts_playwright_runner.py
+    33 /opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/utils.py
+  9270 total
+
+===== M. Most interesting file - traj_processor.py first 60 lines =====
+import base64
+import json
+import shlex
+import binascii
+import logging
+
+logger = logging.getLogger(__name__)
+
+def process_str_replace(traj_str):
+    args = shlex.split(traj_str)
+
+    # Initialize variables to store the encoded strings
+    old_str_encoded = None
+    new_str_encoded = None
+    
+    # Find --old-str and --new-str in the arguments
+    for i, arg in enumerate(args):
+        if arg == '--old-str' and i + 1 < len(args):
+            old_str_encoded = args[i + 1] if args[i + 1].strip() else ""
+        elif arg == '--new-str' and i + 1 < len(args):
+            new_str_encoded = args[i + 1] if args[i + 1].strip() else ""
+
+    # Check if either string was not found
+    if old_str_encoded is None or new_str_encoded is None:
+        return traj_str
+
+    # Decode the base64 strings
+    try:
+        old_str_decoded = base64.b64decode(old_str_encoded).decode('utf-8') if old_str_encoded else ""
+        new_str_decoded = base64.b64decode(new_str_encoded).decode('utf-8') if new_str_encoded else ""
+    except (binascii.Error, UnicodeDecodeError, Exception) as e:
+        # If there's any decoding error, return the original string
+        return traj_str
+
+    # Create new command with decoded strings
+    decoded_traj_str = []
+    i = 0
+    while i < len(args):
+        if args[i] == '--old-str' and old_str_decoded:
+            decoded_traj_str.extend(['--old-str', old_str_decoded])
+            i += 2
+        elif args[i] == '--new-str' and new_str_decoded:
+            decoded_traj_str.extend(['--new-str', new_str_decoded])
+            i += 2
+        else:
+            decoded_traj_str.append(args[i])
+            i += 1
+
+    return repr(' '.join(decoded_traj_str))
+
+
+def process_create(traj_str):
+    args = shlex.split(traj_str)
+
+    # Initialize variable to store the encoded string
+    file_text_encoded = None
+
+    # Find --file-text in the arguments
+    for i, arg in enumerate(args):
+        if arg == '--file-text' and i + 1 < len(args):
+
+===== N. Does anything mention CONTEXT / SYSTEM PROMPT? =====
+/opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/browser_use_runner.py:69:    system_prompt: Optional[str] = None,
+/opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/browser_use_runner.py:75:    ``system_prompt`` is prepended verbatim so the caller can inject extra
+/opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/browser_use_runner.py:98:    if system_prompt:
+/opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/browser_use_runner.py:99:        return f"{system_prompt.strip()}\n\n{base}"
+/opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/browser_use_runner.py:241:    system_prompt: Optional[str],
+/opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/browser_use_runner.py:340:            task = create_test_prompt(page_url, test_case, system_prompt=system_prompt)
+/opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/descriptions.py:388:  `anthropic/claude-3-5-sonnet`). Defaults to `gemini/gemini-3-flash-preview`
+/opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/descriptions.py:408:- `system_prompt` (optional): prepended to the task prompt for every test
+/opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/mcp_tools.py:289:# See: https://github.com/anthropics/claude-code/issues/3084
+/opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/mcp_tools.py:2662:    system_prompt: Annotated[Optional[str], Field(
+/opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/mcp_tools.py:2681:            "`openai/gpt-4o-mini`, `anthropic/claude-3-5-sonnet`). Default "
+/opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/mcp_tools.py:2725:            system_prompt=system_prompt,
+/opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/skill_tools.py:9:  2. Agent skills    — agent-specific (.wingman/, .claude/, .codex/)
+/opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/skill_tools.py:33:    "/root/workspace/.claude/skills",
+/opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/skill_tools.py:38:    "/root/.claude/skills",
+/opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/skill_tools.py:55:        source = root_path.parent.name  # e.g. ".wingman", ".claude", "work_space"
+/opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/skill_tools.py:124:        - Agent:   work_space/.wingman/skills/, .claude/skills/, .codex/skills/
+/opt/plugins-venv/lib/python3.11/site-packages/plugins/tools/agent/skill_tools.py:125:        - User:    ~/.wingman/skills/, ~/.claude/skills/, ~/.codex/skills/
+
+===== O. Server.py - the entry that receives tool calls =====
+"""FastAPI server for the agent tool."""
+import hashlib
+import json
+import sys
+import signal
+import shutil
+import threading
+import concurrent.futures
+import subprocess
+import asyncio
+import time
+import mimetypes
+import os
+import tarfile
+import uuid
+from pathlib import Path
+
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+from typing import Optional, Dict, Any, List
+import uvicorn
+
+
+from plugins.tools.agent.base import ToolError
+from plugins.tools.agent.logger import logger
+from plugins.tools.utils.constant import GIT_STAGE_EXCLUSIONS
+from plugins.tools.utils.utils import remove_stale_git_locks
+# Time the MCP import
+_mcp_import_start = time.time()
+from plugins.tools.agent.mcp_server import get_mcp_server
+_mcp_import_time = time.time() - _mcp_import_start
+
+_agent_import_start = time.time()
+from plugins.tools.agent.impl_ato import AgentTool as AgentToolATO
+from plugins.tools.agent.config import AgentConfig
+_agent_import_time = time.time() - _agent_import_start
+
+logger.info("Starting agent server")
+logger.info(f"AgentTool import took {_agent_import_time:.2f} seconds")
+logger.info(f"MCP import took {_mcp_import_time:.2f} seconds")
+
+# Create global MCP server instance
+_mcp_init_start = time.time()
+mcp_server = get_mcp_server("Agent-Tools")
+tool_mcp_app = mcp_server.mcp.http_app()
+logger.info(f"MCP server initialization took {time.time() - _mcp_init_start:.2f} seconds")
+
+app = FastAPI(title="Agent Tool API", description="API for executing agent tasks", lifespan=tool_mcp_app.lifespan)
+Exit code: 0

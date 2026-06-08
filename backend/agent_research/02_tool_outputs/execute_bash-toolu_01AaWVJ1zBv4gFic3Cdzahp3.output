@@ -1,0 +1,21 @@
+=== FILE SIZES (lines / chars / approx tokens) ===
+backend/server.py                               654 lines   25318 chars  ~ 6329 tokens
+frontend/src/App.js                              44 lines    1585 chars  ~  396 tokens
+frontend/src/index.css                           92 lines    3010 chars  ~  752 tokens
+frontend/tailwind.config.js                      95 lines    3147 chars  ~  786 tokens
+frontend/src/lib/api.js                          22 lines     686 chars  ~  171 tokens
+frontend/src/contexts/AuthContext.jsx            59 lines    1570 chars  ~  392 tokens
+frontend/src/components/Layout.jsx              104 lines    4482 chars  ~ 1120 tokens
+frontend/src/components/ProtectedRoute.jsx       16 lines     499 chars  ~  124 tokens
+frontend/src/pages/Login.jsx                    115 lines    4972 chars  ~ 1243 tokens
+frontend/src/pages/Register.jsx                 119 lines    5119 chars  ~ 1279 tokens
+frontend/src/pages/Dashboard.jsx                174 lines    8804 chars  ~ 2201 tokens
+frontend/src/pages/Contacts.jsx                 179 lines    9563 chars  ~ 2390 tokens
+frontend/src/pages/ContactDetail.jsx            192 lines    9213 chars  ~ 2303 tokens
+frontend/src/pages/Companies.jsx                112 lines    6160 chars  ~ 1540 tokens
+frontend/src/pages/Deals.jsx                    207 lines   10712 chars  ~ 2678 tokens
+frontend/src/pages/Tasks.jsx                    140 lines    7893 chars  ~ 1973 tokens
+
+=== TOTAL ===
+All files combined: 102733 chars  ~25683 tokens
+Exit code: 0

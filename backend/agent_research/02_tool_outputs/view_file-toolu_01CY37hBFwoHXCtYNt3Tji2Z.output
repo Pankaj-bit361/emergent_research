@@ -1,0 +1,54 @@
+[Showing lines 1-52 of 655 total] /app/backend/server.py:
+1|from dotenv import load_dotenv
+2|from pathlib import Path
+3|
+4|ROOT_DIR = Path(__file__).parent
+5|load_dotenv(ROOT_DIR / '.env')
+6|
+7|import os
+8|import uuid
+9|import logging
+10|import bcrypt
+11|import jwt
+12|from datetime import datetime, timezone, timedelta
+13|from typing import List, Optional, Literal
+14|
+15|from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends
+16|from starlette.middleware.cors import CORSMiddleware
+17|from motor.motor_asyncio import AsyncIOMotorClient
+18|from pydantic import BaseModel, Field, EmailStr, ConfigDict
+19|
+20|# -------------------- DB --------------------
+21|mongo_url = os.environ['MONGO_URL']
+22|client = AsyncIOMotorClient(mongo_url)
+23|db = client[os.environ['DB_NAME']]
+24|
+25|# -------------------- App --------------------
+26|app = FastAPI(title="Bloom CRM API")
+27|api = APIRouter(prefix="/api")
+28|
+29|logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+30|logger = logging.getLogger("crm")
+31|
+32|# -------------------- Auth utils --------------------
+33|JWT_ALGO = "HS256"
+34|
+35|def jwt_secret() -> str:
+36|    return os.environ["JWT_SECRET"]
+37|
+38|def hash_password(pw: str) -> str:
+39|    return bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()
+40|
+41|def verify_password(pw: str, hashed: str) -> bool:
+42|    try:
+43|        return bcrypt.checkpw(pw.encode(), hashed.encode())
+44|    except Exception:
+45|        return False
+46|
+47|def make_access_token(user_id: str, email: str) -> str:
+48|    payload = {"sub": user_id, "email": email,
+49|               "exp": datetime.now(timezone.utc) + timedelta(hours=12),
+50|               "type": "access"}
+51|    return jwt.encode(payload, jwt_secret(), algorithm=JWT_ALGO)
+52|
+ [52 lines shown. Remaining: lines 53-655 (603 lines). Use view_range parameter to continue.]

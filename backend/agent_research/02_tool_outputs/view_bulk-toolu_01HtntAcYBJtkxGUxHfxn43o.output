@@ -1,0 +1,708 @@
+===FILE: /app/backend/server.py
+/app/backend/server.py:
+1|from dotenv import load_dotenv
+2|from pathlib import Path
+3|
+4|ROOT_DIR = Path(__file__).parent
+5|load_dotenv(ROOT_DIR / '.env')
+6|
+7|import os
+8|import uuid
+9|import logging
+10|import bcrypt
+11|import jwt
+12|from datetime import datetime, timezone, timedelta
+13|from typing import List, Optional, Literal
+14|
+15|from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends
+16|from starlette.middleware.cors import CORSMiddleware
+17|from motor.motor_asyncio import AsyncIOMotorClient
+18|from pydantic import BaseModel, Field, EmailStr, ConfigDict
+19|
+20|# -------------------- DB --------------------
+21|mongo_url = os.environ['MONGO_URL']
+22|client = AsyncIOMotorClient(mongo_url)
+23|db = client[os.environ['DB_NAME']]
+24|
+25|# -------------------- App --------------------
+26|app = FastAPI(title="Bloom CRM API")
+27|api = APIRouter(prefix="/api")
+28|
+29|logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+30|logger = logging.getLogger("crm")
+31|
+32|# -------------------- Auth utils --------------------
+33|JWT_ALGO = "HS256"
+34|
+35|def jwt_secret() -> str:
+36|    return os.environ["JWT_SECRET"]
+37|
+38|def hash_password(pw: str) -> str:
+39|    return bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()
+40|
+41|def verify_password(pw: str, hashed: str) -> bool:
+42|    try:
+43|        return bcrypt.checkpw(pw.encode(), hashed.encode())
+44|    except Exception:
+45|        return False
+46|
+47|def make_access_token(user_id: str, email: str) -> str:
+48|    payload = {"sub": user_id, "email": email,
+49|               "exp": datetime.now(timezone.utc) + timedelta(hours=12),
+50|               "type": "access"}
+51|    return jwt.encode(payload, jwt_secret(), algorithm=JWT_ALGO)
+52|
+53|def make_refresh_token(user_id: str) -> str:
+54|    payload = {"sub": user_id,
+55|               "exp": datetime.now(timezone.utc) + timedelta(days=7),
+56|               "type": "refresh"}
+57|    return jwt.encode(payload, jwt_secret(), algorithm=JWT_ALGO)
+58|
+59|def set_auth_cookies(resp: Response, access: str, refresh: str):
+60|    resp.set_cookie("access_token", access, httponly=True, secure=False, samesite="lax",
+61|                    max_age=12 * 3600, path="/")
+62|    resp.set_cookie("refresh_token", refresh, httponly=True, secure=False, samesite="lax",
+63|                    max_age=7 * 24 * 3600, path="/")
+64|
+65|async def get_current_user(request: Request) -> dict:
+66|    token = request.cookies.get("access_token")
+67|    if not token:
+68|        auth = request.headers.get("Authorization", "")
+69|        if auth.startswith("Bearer "):
+70|            token = auth[7:]
+71|    if not token:
+72|        raise HTTPException(401, "Not authenticated")
+73|    try:
+74|        payload = jwt.decode(token, jwt_secret(), algorithms=[JWT_ALGO])
+75|        if payload.get("type") != "access":
+76|            raise HTTPException(401, "Invalid token type")
+77|        user = await db.users.find_one({"id": payload["sub"]}, {"_id": 0, "password_hash": 0})
+78|        if not user:
+79|            raise HTTPException(401, "User not found")
+80|        return user
+81|    except jwt.ExpiredSignatureError:
+82|        raise HTTPException(401, "Token expired")
+83|    except jwt.InvalidTokenError:
+84|        raise HTTPException(401, "Invalid token")
+85|
+86|# -------------------- Models --------------------
+87|def now_iso() -> str:
+88|    return datetime.now(timezone.utc).isoformat()
+89|
+90|class RegisterIn(BaseModel):
+91|    name: str
+92|    email: EmailStr
+93|    password: str = Field(min_length=6)
+94|
+95|class LoginIn(BaseModel):
+96|    email: EmailStr
+97|    password: str
+98|
+99|class UserOut(BaseModel):
+100|    id: str
+101|    name: str
+102|    email: EmailStr
+103|    role: str = "user"
+104|    created_at: str
+105|
+106|class CompanyIn(BaseModel):
+107|    name: str
+108|    industry: Optional[str] = None
+109|    website: Optional[str] = None
+110|    size: Optional[str] = None
+111|    notes: Optional[str] = None
+112|
+113|class Company(CompanyIn):
+114|    id: str
+115|    created_at: str
+116|
+117|class ContactIn(BaseModel):
+118|    name: str
+119|    email: Optional[EmailStr] = None
+120|    phone: Optional[str] = None
+121|    title: Optional[str] = None
+122|    company: Optional[str] = None
+123|    status: Literal["lead", "active", "customer", "inactive"] = "lead"
+124|    tags: List[str] = []
+125|    notes: Optional[str] = None
+126|
+127|class Contact(ContactIn):
+128|    id: str
+129|    created_at: str
+130|    lead_score: Optional[int] = None
+131|    score_reasoning: Optional[str] = None
+132|
+133|DealStage = Literal["lead", "qualified", "proposal", "negotiation", "won", "lost"]
+134|
+135|class DealIn(BaseModel):
+136|    title: str
+137|    value: float = 0
+138|    stage: DealStage = "lead"
+139|    contact_id: Optional[str] = None
+140|    contact_name: Optional[str] = None
+141|    company: Optional[str] = None
+142|    close_date: Optional[str] = None
+143|    probability: int = 20
+144|    notes: Optional[str] = None
+145|
+146|class Deal(DealIn):
+147|    id: str
+148|    created_at: str
+149|
+150|class TaskIn(BaseModel):
+151|    title: str
+152|    description: Optional[str] = None
+153|    due_date: Optional[str] = None
+154|    priority: Literal["low", "medium", "high"] = "medium"
+155|    completed: bool = False
+156|    contact_id: Optional[str] = None
+157|    deal_id: Optional[str] = None
+158|
+159|class Task(TaskIn):
+160|    id: str
+161|    created_at: str
+162|
+163|class NoteIn(BaseModel):
+164|    contact_id: str
+165|    content: str
+166|    type: Literal["note", "call", "email", "meeting"] = "note"
+167|
+168|class Note(NoteIn):
+169|    id: str
+170|    created_at: str
+171|    author: Optional[str] = None
+172|
+173|# -------------------- Helpers --------------------
+174|def new_id() -> str:
+175|    return str(uuid.uuid4())
+176|
+177|def strip_mongo(doc):
+178|    if doc and "_id" in doc:
+179|        doc.pop("_id", None)
+180|    return doc
+181|
+182|# -------------------- Auth Endpoints --------------------
+183|@api.post("/auth/register", response_model=UserOut)
+184|async def register(payload: RegisterIn, response: Response):
+185|    email = payload.email.lower()
+186|    if await db.users.find_one({"email": email}):
+187|        raise HTTPException(400, "Email already registered")
+188|    user = {
+189|        "id": new_id(),
+190|        "name": payload.name,
+191|        "email": email,
+192|        "password_hash": hash_password(payload.password),
+193|        "role": "user",
+194|        "created_at": now_iso(),
+195|    }
+196|    await db.users.insert_one(user)
+197|    set_auth_cookies(response, make_access_token(user["id"], email), make_refresh_token(user["id"]))
+198|    return UserOut(**{k: v for k, v in user.items() if k != "password_hash"})
+199|
+200|@api.post("/auth/login", response_model=UserOut)
+201|async def login(payload: LoginIn, response: Response):
+202|    email = payload.email.lower()
+203|    user = await db.users.find_one({"email": email})
+204|    if not user or not verify_password(payload.password, user["password_hash"]):
+205|        raise HTTPException(401, "Invalid email or password")
+206|    set_auth_cookies(response, make_access_token(user["id"], email), make_refresh_token(user["id"]))
+207|    user = strip_mongo(user)
+208|    user.pop("password_hash", None)
+209|    return UserOut(**user)
+210|
+211|@api.post("/auth/logout")
+212|async def logout(response: Response):
+213|    response.delete_cookie("access_token", path="/")
+214|    response.delete_cookie("refresh_token", path="/")
+215|    return {"ok": True}
+216|
+217|@api.get("/auth/me", response_model=UserOut)
+218|async def me(current=Depends(get_current_user)):
+219|    return UserOut(**current)
+220|
+221|@api.post("/auth/refresh")
+222|async def refresh_token(request: Request, response: Response):
+223|    rt = request.cookies.get("refresh_token")
+224|    if not rt:
+225|        raise HTTPException(401, "No refresh token")
+226|    try:
+227|        payload = jwt.decode(rt, jwt_secret(), algorithms=[JWT_ALGO])
+228|        if payload.get("type") != "refresh":
+229|            raise HTTPException(401, "Invalid token")
+230|        user = await db.users.find_one({"id": payload["sub"]})
+231|        if not user:
+232|            raise HTTPException(401, "User not found")
+233|        set_auth_cookies(response, make_access_token(user["id"], user["email"]), rt)
+234|        return {"ok": True}
+235|    except jwt.InvalidTokenError:
+236|        raise HTTPException(401, "Invalid refresh token")
+237|
+238|# -------------------- Companies --------------------
+239|@api.get("/companies", response_model=List[Company])
+240|async def list_companies(current=Depends(get_current_user)):
+241|    rows = await db.companies.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+242|    return rows
+243|
+244|@api.post("/companies", response_model=Company)
+245|async def create_company(payload: CompanyIn, current=Depends(get_current_user)):
+246|    doc = {"id": new_id(), "created_at": now_iso(), **payload.model_dump()}
+247|    await db.companies.insert_one(doc)
+248|    return strip_mongo(doc)
+249|
+250|@api.put("/companies/{cid}", response_model=Company)
+251|async def update_company(cid: str, payload: CompanyIn, current=Depends(get_current_user)):
+252|    res = await db.companies.find_one_and_update(
+253|        {"id": cid}, {"$set": payload.model_dump()}, return_document=True)
+254|    if not res:
+255|        raise HTTPException(404, "Not found")
+256|    return strip_mongo(res)
+257|
+258|@api.delete("/companies/{cid}")
+259|async def delete_company(cid: str, current=Depends(get_current_user)):
+260|    r = await db.companies.delete_one({"id": cid})
+261|    return {"deleted": r.deleted_count}
+262|
+263|# -------------------- Contacts --------------------
+264|@api.get("/contacts", response_model=List[Contact])
+265|async def list_contacts(current=Depends(get_current_user)):
+266|    rows = await db.contacts.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+267|    return rows
+268|
+269|@api.get("/contacts/{cid}", response_model=Contact)
+270|async def get_contact(cid: str, current=Depends(get_current_user)):
+271|    row = await db.contacts.find_one({"id": cid}, {"_id": 0})
+272|    if not row:
+273|        raise HTTPException(404, "Not found")
+274|    return row
+275|
+276|@api.post("/contacts", response_model=Contact)
+277|async def create_contact(payload: ContactIn, current=Depends(get_current_user)):
+278|    doc = {"id": new_id(), "created_at": now_iso(),
+279|           "lead_score": None, "score_reasoning": None, **payload.model_dump()}
+280|    await db.contacts.insert_one(doc)
+281|    return strip_mongo(doc)
+282|
+283|@api.put("/contacts/{cid}", response_model=Contact)
+284|async def update_contact(cid: str, payload: ContactIn, current=Depends(get_current_user)):
+285|    res = await db.contacts.find_one_and_update(
+286|        {"id": cid}, {"$set": payload.model_dump()}, return_document=True)
+287|    if not res:
+288|        raise HTTPException(404, "Not found")
+289|    return strip_mongo(res)
+290|
+291|@api.delete("/contacts/{cid}")
+292|async def delete_contact(cid: str, current=Depends(get_current_user)):
+293|    r = await db.contacts.delete_one({"id": cid})
+294|    await db.notes.delete_many({"contact_id": cid})
+295|    return {"deleted": r.deleted_count}
+296|
+297|# -------------------- Deals --------------------
+298|@api.get("/deals", response_model=List[Deal])
+299|async def list_deals(current=Depends(get_current_user)):
+300|    rows = await db.deals.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+301|    return rows
+302|
+303|@api.post("/deals", response_model=Deal)
+304|async def create_deal(payload: DealIn, current=Depends(get_current_user)):
+305|    doc = {"id": new_id(), "created_at": now_iso(), **payload.model_dump()}
+306|    await db.deals.insert_one(doc)
+307|    return strip_mongo(doc)
+308|
+309|@api.put("/deals/{did}", response_model=Deal)
+310|async def update_deal(did: str, payload: DealIn, current=Depends(get_current_user)):
+311|    res = await db.deals.find_one_and_update(
+312|        {"id": did}, {"$set": payload.model_dump()}, return_document=True)
+313|    if not res:
+314|        raise HTTPException(404, "Not found")
+315|    return strip_mongo(res)
+316|
+317|class StageUpdate(BaseModel):
+318|    stage: DealStage
+319|
+320|@api.patch("/deals/{did}/stage", response_model=Deal)
+321|async def update_deal_stage(did: str, payload: StageUpdate, current=Depends(get_current_user)):
+322|    res = await db.deals.find_one_and_update(
+323|        {"id": did}, {"$set": {"stage": payload.stage}}, return_document=True)
+324|    if not res:
+325|        raise HTTPException(404, "Not found")
+326|    return strip_mongo(res)
+327|
+328|@api.delete("/deals/{did}")
+329|async def delete_deal(did: str, current=Depends(get_current_user)):
+330|    r = await db.deals.delete_one({"id": did})
+331|    return {"deleted": r.deleted_count}
+332|
+333|# -------------------- Tasks --------------------
+334|@api.get("/tasks", response_model=List[Task])
+335|async def list_tasks(current=Depends(get_current_user)):
+336|    rows = await db.tasks.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+337|    return rows
+338|
+339|@api.post("/tasks", response_model=Task)
+340|async def create_task(payload: TaskIn, current=Depends(get_current_user)):
+341|    doc = {"id": new_id(), "created_at": now_iso(), **payload.model_dump()}
+342|    await db.tasks.insert_one(doc)
+343|    return strip_mongo(doc)
+344|
+345|@api.put("/tasks/{tid}", response_model=Task)
+346|async def update_task(tid: str, payload: TaskIn, current=Depends(get_current_user)):
+347|    res = await db.tasks.find_one_and_update(
+348|        {"id": tid}, {"$set": payload.model_dump()}, return_document=True)
+349|    if not res:
+350|        raise HTTPException(404, "Not found")
+351|    return strip_mongo(res)
+352|
+353|@api.delete("/tasks/{tid}")
+354|async def delete_task(tid: str, current=Depends(get_current_user)):
+355|    r = await db.tasks.delete_one({"id": tid})
+356|    return {"deleted": r.deleted_count}
+357|
+358|# -------------------- Notes --------------------
+359|@api.get("/notes/{contact_id}", response_model=List[Note])
+360|async def list_notes(contact_id: str, current=Depends(get_current_user)):
+361|    rows = await db.notes.find({"contact_id": contact_id}, {"_id": 0}).sort("created_at", -1).to_list(500)
+362|    return rows
+363|
+364|@api.post("/notes", response_model=Note)
+365|async def create_note(payload: NoteIn, current=Depends(get_current_user)):
+366|    doc = {"id": new_id(), "created_at": now_iso(), "author": current.get("name"),
+367|           **payload.model_dump()}
+368|    await db.notes.insert_one(doc)
+369|    return strip_mongo(doc)
+370|
+371|@api.delete("/notes/{nid}")
+372|async def delete_note(nid: str, current=Depends(get_current_user)):
+373|    r = await db.notes.delete_one({"id": nid})
+374|    return {"deleted": r.deleted_count}
+375|
+376|# -------------------- Dashboard --------------------
+377|@api.get("/dashboard/stats")
+378|async def dashboard_stats(current=Depends(get_current_user)):
+379|    contacts_total = await db.contacts.count_documents({})
+380|    deals = await db.deals.find({}, {"_id": 0}).to_list(2000)
+381|    tasks_open = await db.tasks.count_documents({"completed": False})
+382|    won = [d for d in deals if d["stage"] == "won"]
+383|    pipeline = [d for d in deals if d["stage"] not in ("won", "lost")]
+384|    revenue = sum(d.get("value", 0) for d in won)
+385|    pipeline_value = sum(d.get("value", 0) for d in pipeline)
+386|
+387|    stage_breakdown = {}
+388|    for s in ["lead", "qualified", "proposal", "negotiation", "won", "lost"]:
+389|        stage_breakdown[s] = {
+390|            "count": sum(1 for d in deals if d["stage"] == s),
+391|            "value": sum(d.get("value", 0) for d in deals if d["stage"] == s),
+392|        }
+393|
+394|    # Revenue trend last 6 months
+395|    months = []
+396|    now = datetime.now(timezone.utc).replace(day=1)
+397|    for i in range(5, -1, -1):
+398|        m = now - timedelta(days=30 * i)
+399|        months.append({"label": m.strftime("%b"), "month": m.strftime("%Y-%m"), "value": 0})
+400|    by_month = {m["month"]: m for m in months}
+401|    for d in won:
+402|        try:
+403|            dt = datetime.fromisoformat(d["created_at"])
+404|            key = dt.strftime("%Y-%m")
+405|            if key in by_month:
+406|                by_month[key]["value"] += d.get("value", 0)
+407|        except Exception:
+408|            pass
+409|
+410|    recent = await db.contacts.find({}, {"_id": 0}).sort("created_at", -1).limit(5).to_list(5)
+411|
+412|    return {
+413|        "kpis": {
+414|            "revenue": revenue,
+415|            "deals_won": len(won),
+416|            "pipeline_value": pipeline_value,
+417|            "contacts": contacts_total,
+418|            "tasks_open": tasks_open,
+419|        },
+420|        "stage_breakdown": stage_breakdown,
+421|        "revenue_trend": months,
+422|        "recent_contacts": recent,
+423|    }
+424|
+425|# -------------------- AI --------------------
+426|class LeadScoreIn(BaseModel):
+427|    contact_id: str
+428|
+429|class EmailDraftIn(BaseModel):
+430|    contact_id: Optional[str] = None
+431|    deal_id: Optional[str] = None
+432|    purpose: str = "follow-up"
+433|    tone: str = "friendly professional"
+434|    context: Optional[str] = None
+435|
+436|async def _llm_chat(system: str, user_text: str) -> str:
+437|    from emergentintegrations.llm.chat import LlmChat, UserMessage
+438|    key = os.environ["EMERGENT_LLM_KEY"]
+439|    chat = LlmChat(
+440|        api_key=key,
+441|        session_id=f"crm-{uuid.uuid4()}",
+442|        system_message=system,
+443|    ).with_model("anthropic", "claude-sonnet-4-5-20250929")
+444|    resp = await chat.send_message(UserMessage(text=user_text))
+445|    return str(resp)
+446|
+447|@api.post("/ai/lead-score")
+448|async def ai_lead_score(payload: LeadScoreIn, current=Depends(get_current_user)):
+449|    contact = await db.contacts.find_one({"id": payload.contact_id}, {"_id": 0})
+450|    if not contact:
+451|        raise HTTPException(404, "Contact not found")
+452|    deals = await db.deals.find({"contact_id": payload.contact_id}, {"_id": 0}).to_list(50)
+453|    notes = await db.notes.find({"contact_id": payload.contact_id}, {"_id": 0}).sort("created_at", -1).limit(10).to_list(10)
+454|
+455|    system = (
+456|        "You are a senior sales operations analyst. Given a CRM contact, related deals and notes, "
+457|        "produce a lead score from 0 to 100 and a short reasoning (max 3 sentences). "
+458|        "Respond in STRICT JSON ONLY with the shape: {\"score\": <int>, \"reasoning\": \"<text>\"}. "
+459|        "No prose, no markdown, no backticks."
+460|    )
+461|    user_text = (
+462|        f"Contact:\n{contact}\n\nDeals:\n{deals}\n\nRecent notes:\n{notes}\n\n"
+463|        "Score this lead based on engagement, deal value, status, and recent activity."
+464|    )
+465|    raw = await _llm_chat(system, user_text)
+466|    import json, re
+467|    score = 50
+468|    reasoning = raw.strip()
+469|    try:
+470|        m = re.search(r"\{[\s\S]*\}", raw)
+471|        if m:
+472|            data = json.loads(m.group(0))
+473|            score = int(data.get("score", 50))
+474|            reasoning = data.get("reasoning", reasoning)
+475|    except Exception as e:
+476|        logger.warning(f"lead-score parse failed: {e}")
+477|    score = max(0, min(100, score))
+478|    await db.contacts.update_one({"id": payload.contact_id},
+479|                                 {"$set": {"lead_score": score, "score_reasoning": reasoning}})
+480|    return {"score": score, "reasoning": reasoning}
+481|
+482|@api.post("/ai/email-draft")
+483|async def ai_email_draft(payload: EmailDraftIn, current=Depends(get_current_user)):
+484|    contact = None
+485|    deal = None
+486|    if payload.contact_id:
+487|        contact = await db.contacts.find_one({"id": payload.contact_id}, {"_id": 0})
+488|    if payload.deal_id:
+489|        deal = await db.deals.find_one({"id": payload.deal_id}, {"_id": 0})
+490|
+491|    system = (
+492|        "You are an expert B2B sales writer. Draft concise, warm, high-converting emails. "
+493|        "Output a JSON object with keys 'subject' and 'body' ONLY. No markdown, no backticks."
+494|    )
+495|    user_text = (
+496|        f"Purpose: {payload.purpose}\nTone: {payload.tone}\n"
+497|        f"Sender: {current.get('name','Sales')}\n"
+498|        f"Contact: {contact}\nDeal: {deal}\n"
+499|        f"Additional context: {payload.context or 'none'}\n"
+500|        "Return JSON: {\"subject\": \"...\", \"body\": \"...\"}"
+501|    )
+502|    raw = await _llm_chat(system, user_text)
+503|    import json, re
+504|    subject = "Following up"
+505|    body = raw.strip()
+506|    try:
+507|        m = re.search(r"\{[\s\S]*\}", raw)
+508|        if m:
+509|            data = json.loads(m.group(0))
+510|            subject = data.get("subject", subject)
+511|            body = data.get("body", body)
+512|    except Exception as e:
+513|        logger.warning(f"email-draft parse failed: {e}")
+514|    return {"subject": subject, "body": body}
+515|
+516|# -------------------- Seeding --------------------
+517|async def seed_admin():
+518|    email = os.environ.get("ADMIN_EMAIL", "admin@crm.com").lower()
+519|    pw = os.environ.get("ADMIN_PASSWORD", "admin123")
+520|    existing = await db.users.find_one({"email": email})
+521|    if not existing:
+522|        await db.users.insert_one({
+523|            "id": new_id(),
+524|            "name": "Admin",
+525|            "email": email,
+526|            "password_hash": hash_password(pw),
+527|            "role": "admin",
+528|            "created_at": now_iso(),
+529|        })
+530|        logger.info(f"Seeded admin user {email}")
+531|    elif not verify_password(pw, existing["password_hash"]):
+532|        await db.users.update_one({"email": email},
+533|                                  {"$set": {"password_hash": hash_password(pw)}})
+534|
+535|async def seed_demo_data():
+536|    if await db.contacts.count_documents({}) > 0:
+537|        return
+538|    companies = [
+539|        {"id": new_id(), "name": "Northwind Studio", "industry": "Design Agency",
+540|         "website": "northwind.studio", "size": "11-50", "notes": "Boutique design studio",
+541|         "created_at": now_iso()},
+542|        {"id": new_id(), "name": "Acme Robotics", "industry": "Manufacturing",
+543|         "website": "acme.io", "size": "200-500", "notes": "Industrial automation",
+544|         "created_at": now_iso()},
+545|        {"id": new_id(), "name": "Lumen Health", "industry": "Healthcare",
+546|         "website": "lumenhealth.co", "size": "51-200", "notes": "Telehealth platform",
+547|         "created_at": now_iso()},
+548|        {"id": new_id(), "name": "Orbit Labs", "industry": "SaaS",
+549|         "website": "orbitlabs.dev", "size": "11-50", "notes": "Developer tools",
+550|         "created_at": now_iso()},
+551|    ]
+552|    await db.companies.insert_many(companies)
+553|
+554|    contacts_seed = [
+555|        ("Mira Patel", "mira@northwind.studio", "Creative Director", "Northwind Studio", "active",
+556|         ["design", "priority"], "Met at conference. Interested in Pro plan."),
+557|        ("Daniel Reyes", "daniel@acme.io", "Head of Procurement", "Acme Robotics", "lead",
+558|         ["enterprise"], "Sent intro deck last week."),
+559|        ("Sophie Lin", "sophie@lumenhealth.co", "VP Marketing", "Lumen Health", "customer",
+560|         ["expansion"], "Upsell opportunity in Q2."),
+561|        ("Theo Nakamura", "theo@orbitlabs.dev", "CTO", "Orbit Labs", "active",
+562|         ["technical"], "Evaluating API integration."),
+563|        ("Aisha Okafor", "aisha@northwind.studio", "Studio Manager", "Northwind Studio", "lead",
+564|         ["referral"], "Referred by Mira."),
+565|        ("Jonas Weber", "jonas@acme.io", "VP Engineering", "Acme Robotics", "inactive",
+566|         [], "Went quiet after Q4."),
+567|    ]
+568|    contact_docs = []
+569|    for n, e, t, c, s, tg, nt in contacts_seed:
+570|        contact_docs.append({
+571|            "id": new_id(), "name": n, "email": e, "phone": None, "title": t,
+572|            "company": c, "status": s, "tags": tg, "notes": nt,
+573|            "lead_score": None, "score_reasoning": None, "created_at": now_iso(),
+574|        })
+575|    await db.contacts.insert_many(contact_docs)
+576|
+577|    deals_seed = [
+578|        ("Pro Plan – Northwind", 18000, "proposal", contact_docs[0], 60),
+579|        ("Enterprise pilot – Acme", 92000, "qualified", contact_docs[1], 35),
+580|        ("Lumen expansion", 48000, "negotiation", contact_docs[2], 75),
+581|        ("Orbit API license", 24000, "lead", contact_docs[3], 20),
+582|        ("Northwind add-on", 6000, "won", contact_docs[0], 100),
+583|        ("Acme retainer", 15000, "lost", contact_docs[5], 0),
+584|        ("Lumen multi-seat", 32000, "won", contact_docs[2], 100),
+585|    ]
+586|    deal_docs = []
+587|    for title, val, stage, c, prob in deals_seed:
+588|        deal_docs.append({
+589|            "id": new_id(), "title": title, "value": val, "stage": stage,
+590|            "contact_id": c["id"], "contact_name": c["name"], "company": c["company"],
+591|            "close_date": None, "probability": prob, "notes": None,
+592|            "created_at": now_iso(),
+593|        })
+594|    await db.deals.insert_many(deal_docs)
+595|
+596|    tasks_seed = [
+597|        ("Send proposal to Mira", "Include case studies", "high", False, contact_docs[0]["id"]),
+598|        ("Follow-up call with Daniel", None, "medium", False, contact_docs[1]["id"]),
+599|        ("Quarterly review – Lumen", "Prep deck", "high", False, contact_docs[2]["id"]),
+600|        ("Send pricing sheet to Theo", None, "low", True, contact_docs[3]["id"]),
+601|        ("Reconnect with Jonas", "Has been quiet", "medium", False, contact_docs[5]["id"]),
+602|    ]
+603|    task_docs = []
+604|    for t, d, p, done, cid in tasks_seed:
+605|        task_docs.append({
+606|            "id": new_id(), "title": t, "description": d, "due_date": None,
+607|            "priority": p, "completed": done, "contact_id": cid, "deal_id": None,
+608|            "created_at": now_iso(),
+609|        })
+610|    await db.tasks.insert_many(task_docs)
+611|
+612|    notes_seed = [
+613|        (contact_docs[0]["id"], "Demo went well. Mira wants pricing by Friday.", "meeting"),
+614|        (contact_docs[0]["id"], "Sent proposal v2 with annual discount.", "email"),
+615|        (contact_docs[1]["id"], "Daniel asked about security compliance.", "call"),
+616|        (contact_docs[2]["id"], "Sophie excited about new dashboard features.", "call"),
+617|    ]
+618|    note_docs = []
+619|    for cid, content, ntype in notes_seed:
+620|        note_docs.append({
+621|            "id": new_id(), "contact_id": cid, "content": content, "type": ntype,
+622|            "author": "Admin", "created_at": now_iso(),
+623|        })
+624|    await db.notes.insert_many(note_docs)
+625|    logger.info("Seeded demo data")
+626|
+627|@app.on_event("startup")
+628|async def on_start():
+629|    await db.users.create_index("email", unique=True)
+630|    await db.contacts.create_index("id", unique=True)
+631|    await db.deals.create_index("id", unique=True)
+632|    await db.companies.create_index("id", unique=True)
+633|    await db.tasks.create_index("id", unique=True)
+634|    await db.notes.create_index("id", unique=True)
+635|    await seed_admin()
+636|    await seed_demo_data()
+637|
+638|@app.on_event("shutdown")
+639|async def on_stop():
+640|    client.close()
+641|
+642|@api.get("/")
+643|async def root():
+644|    return {"message": "Bloom CRM API"}
+645|
+646|app.include_router(api)
+647|
+648|app.add_middleware(
+649|    CORSMiddleware,
+650|    allow_credentials=True,
+651|    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
+652|    allow_methods=["*"],
+653|    allow_headers=["*"],
+654|)
+655|
+
+===END
+
+===FILE: /app/frontend/.env
+/app/frontend/.env:
+1|REACT_APP_BACKEND_URL=https://crm-studio-5.preview.emergentagent.com
+2|WDS_SOCKET_PORT=443
+3|ENABLE_HEALTH_CHECK=false
+
+===END
+
+===FILE: /app/backend/.env
+/app/backend/.env:
+1|MONGO_URL="mongodb://localhost:27017"
+2|DB_NAME="test_database"
+3|CORS_ORIGINS="*"
+4|JWT_SECRET="3f7c2a9b1e4d8f6a0c5b2e9d4a7f1c8b5e2d9a6f3c0b7e4d1a8f5c2b9e6d3a0f"
+5|ADMIN_EMAIL="admin@crm.com"
+6|ADMIN_PASSWORD="admin123"
+7|EMERGENT_LLM_KEY="sk-emergent-82e533cA90256248a8"
+8|FRONTEND_URL="http://localhost:3000"
+9|
+
+===END
+
+===DIR: /app/test_reports
+/app/test_reports/ (depth=2):
+/app/test_reports/pytest/
+
+===END
+
+===FILE: /app/memory/test_credentials.md
+/app/memory/test_credentials.md:
+1|# Test Credentials
+2|
+3|## Admin
+4|- Email: `admin@crm.com`
+5|- Password: `admin123`
+6|- Role: admin
+7|
+8|## Auth endpoints
+9|- POST `/api/auth/register` — body: `{name, email, password}`
+10|- POST `/api/auth/login` — body: `{email, password}`
+11|- POST `/api/auth/logout`
+12|- GET  `/api/auth/me`
+13|- POST `/api/auth/refresh`
+14|
+15|Auth uses httpOnly cookies (`access_token`, `refresh_token`). Frontend must use `withCredentials: true`.
+16|
+
+===END
