@@ -1,0 +1,52 @@
+2026-06-08 10:26:33,236 - INFO - Starting monitor for entity: af0940da-02af-4fbe-94c6-9da211087a76
+2026-06-08 10:26:33,236 - INFO - Base URL: https://demobackend.emergentagent.com
+2026-06-08 10:26:33,236 - INFO - Interval: 1
+2026-06-08 10:26:33,236 - INFO - Heartbeat interval: 5 minutes
+2026-06-08 10:26:33,245 - WARNING - Retrying (Retry(total=4, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError("HTTPConnection(host='localhost', port=8010): Failed to establish a new connection: [Errno 111] Connection refused")': /status
+2026-06-08 10:26:35,294 - WARNING - Retrying (Retry(total=3, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError("HTTPConnection(host='localhost', port=8010): Failed to establish a new connection: [Errno 111] Connection refused")': /status
+2026-06-08 10:26:39,295 - WARNING - Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError("HTTPConnection(host='localhost', port=8010): Failed to establish a new connection: [Errno 111] Connection refused")': /status
+2026-06-08 10:26:39,299 - INFO - Status changed from None to stopped
+2026-06-08 10:26:39,299 - INFO - Sending heartbeat to: https://demobackend.emergentagent.com/heartbeat/v0/
+/opt/plugins-venv/lib/python3.11/site-packages/urllib3/connectionpool.py:1110: InsecureRequestWarning: Unverified HTTPS request is being made to host 'demobackend.emergentagent.com'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-06-08 10:26:39,347 - INFO - Heartbeat sent: stopped
+2026-06-08 10:31:40,015 - INFO - Sending periodic heartbeat after 5 minutes
+2026-06-08 10:31:40,016 - INFO - Sending heartbeat to: https://demobackend.emergentagent.com/heartbeat/v0/
+/opt/plugins-venv/lib/python3.11/site-packages/urllib3/connectionpool.py:1110: InsecureRequestWarning: Unverified HTTPS request is being made to host 'demobackend.emergentagent.com'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-06-08 10:31:40,054 - INFO - Heartbeat sent: stopped
+2026-06-08 10:36:41,005 - INFO - Sending periodic heartbeat after 5 minutes
+2026-06-08 10:36:41,006 - INFO - Sending heartbeat to: https://demobackend.emergentagent.com/heartbeat/v0/
+/opt/plugins-venv/lib/python3.11/site-packages/urllib3/connectionpool.py:1110: InsecureRequestWarning: Unverified HTTPS request is being made to host 'demobackend.emergentagent.com'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-06-08 10:36:41,034 - INFO - Heartbeat sent: stopped
+2026-06-08 10:41:41,460 - INFO - Sending periodic heartbeat after 5 minutes
+2026-06-08 10:41:41,460 - INFO - Sending heartbeat to: https://demobackend.emergentagent.com/heartbeat/v0/
+/opt/plugins-venv/lib/python3.11/site-packages/urllib3/connectionpool.py:1110: InsecureRequestWarning: Unverified HTTPS request is being made to host 'demobackend.emergentagent.com'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-06-08 10:41:41,494 - INFO - Heartbeat sent: stopped
+2026-06-08 10:46:41,917 - INFO - Sending periodic heartbeat after 5 minutes
+2026-06-08 10:46:41,917 - INFO - Sending heartbeat to: https://demobackend.emergentagent.com/heartbeat/v0/
+/opt/plugins-venv/lib/python3.11/site-packages/urllib3/connectionpool.py:1110: InsecureRequestWarning: Unverified HTTPS request is being made to host 'demobackend.emergentagent.com'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-06-08 10:46:41,950 - INFO - Heartbeat sent: stopped
+2026-06-08 10:51:42,373 - INFO - Sending periodic heartbeat after 5 minutes
+2026-06-08 10:51:42,373 - INFO - Sending heartbeat to: https://demobackend.emergentagent.com/heartbeat/v0/
+/opt/plugins-venv/lib/python3.11/site-packages/urllib3/connectionpool.py:1110: InsecureRequestWarning: Unverified HTTPS request is being made to host 'demobackend.emergentagent.com'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-06-08 10:51:42,408 - INFO - Heartbeat sent: stopped
+2026-06-08 10:56:42,818 - INFO - Sending periodic heartbeat after 5 minutes
+2026-06-08 10:56:42,818 - INFO - Sending heartbeat to: https://demobackend.emergentagent.com/heartbeat/v0/
+/opt/plugins-venv/lib/python3.11/site-packages/urllib3/connectionpool.py:1110: InsecureRequestWarning: Unverified HTTPS request is being made to host 'demobackend.emergentagent.com'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-06-08 10:56:42,970 - INFO - Heartbeat sent: stopped
+2026-06-08 11:01:43,401 - INFO - Sending periodic heartbeat after 5 minutes
+2026-06-08 11:01:43,402 - INFO - Sending heartbeat to: https://demobackend.emergentagent.com/heartbeat/v0/
+/opt/plugins-venv/lib/python3.11/site-packages/urllib3/connectionpool.py:1110: InsecureRequestWarning: Unverified HTTPS request is being made to host 'demobackend.emergentagent.com'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-06-08 11:01:43,436 - INFO - Heartbeat sent: stopped
+2026-06-08 11:06:44,177 - INFO - Sending periodic heartbeat after 5 minutes
+2026-06-08 11:06:44,178 - INFO - Sending heartbeat to: https://demobackend.emergentagent.com/heartbeat/v0/
+/opt/plugins-venv/lib/python3.11/site-packages/urllib3/connectionpool.py:1110: InsecureRequestWarning: Unverified HTTPS request is being made to host 'demobackend.emergentagent.com'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+2026-06-08 11:06:44,207 - INFO - Heartbeat sent: stopped
