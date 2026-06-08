@@ -1,0 +1,119 @@
+{
+  "theme": "light",
+  "archetype": "1_organic_earthy",
+  "vibe": "Modern minimal, tactile, distinctive, warm, spacious, high-readability",
+  "global_rules": {
+    "spacing": "Generous. Use p-6, p-8, and p-12 extensively. Containers with borders MUST have generous padding to avoid text collisions.",
+    "borders_and_radius": "Subtle border-radius max 8px (rounded-md/rounded-lg). Use thin 1px borders (#E5E2DC) to separate sections rather than heavy shadows.",
+    "shadows": "Very minimal. Use shadow-sm for cards or inputs, and shadow-md for dropdowns/modals. Avoid heavy dark shadows.",
+    "icons": "lucide-react for standard icons.",
+    "data_testids": "All interactive elements MUST include kebab-case, role-based data-testid attributes."
+  },
+  "typography": {
+    "font_families": {
+      "heading": "Outfit",
+      "body": "Manrope",
+      "mono": "JetBrains Mono"
+    },
+    "hierarchy": {
+      "h1": "text-4xl sm:text-5xl font-black tracking-tighter text-charcoal",
+      "h2": "text-2xl sm:text-3xl font-bold tracking-tight text-charcoal",
+      "h3": "text-xl sm:text-2xl font-semibold tracking-tight text-charcoal",
+      "h4": "text-lg font-medium tracking-tight text-charcoal",
+      "body": "text-base leading-relaxed text-taupe font-normal",
+      "small": "text-sm text-taupe/80",
+      "overline": "text-xs font-semibold uppercase tracking-[0.2em] text-terracotta"
+    }
+  },
+  "color_palette": {
+    "background": {
+      "app": "#F9F8F6", 
+      "card": "#FFFFFF",
+      "sidebar": "#F4F2EE",
+      "header": "#FFFFFF"
+    },
+    "text": {
+      "main": "#1C1B1A", 
+      "muted": "#75716C",
+      "inverse": "#FFFFFF"
+    },
+    "accent": {
+      "primary": "#D96C4A",
+      "primary_hover": "#C25939",
+      "secondary": "#3D405B",
+      "secondary_hover": "#2B2D42"
+    },
+    "status": {
+      "success_bg": "#E8F0EB",
+      "success_text": "#4A6B56",
+      "warning_bg": "#FDF4E7",
+      "warning_text": "#B37422",
+      "danger_bg": "#FAEAEA",
+      "danger_text": "#9E4747",
+      "info_bg": "#EAF0F6",
+      "info_text": "#3D5A80"
+    },
+    "kanban": {
+      "lead": "#EAF0F6",
+      "qualified": "#E8F0EB",
+      "proposal": "#FDF4E7",
+      "negotiation": "#F3E8FF",
+      "won": "#E8F0EB",
+      "lost": "#FAEAEA"
+    },
+    "border": {
+      "default": "#E5E2DC",
+      "focus": "#D96C4A"
+    }
+  },
+  "layout_strategies": {
+    "dashboard_grid": "Mode B (Control Room Grid): Use grid-cols-1 md:grid-cols-3 lg:grid-cols-4 with gap-6. KPI cards take 1 col, primary charts take 2-3 cols, activity feed takes 1 col. Every pixel utilized, h-full on children.",
+    "sidebar": "Fixed left sidebar. Clean list, un-bordered icons. Active state uses subtle gray background with terracotta left-border or icon color.",
+    "header": "Sticky header with glassmorphism (backdrop-blur-md bg-white/70) if content scrolls under, or solid bg-white with 1px border-b.",
+    "kanban_board": "Horizontal scroll container. Columns have background #F4F2EE, rounded-lg, p-4. Deal cards are background #FFFFFF, rounded-md, p-4, shadow-sm, cursor-grab. Clean typography on cards (Title, Value, Due Date, Avatar).",
+    "tables": "Clean data tables. Left-aligned text. 1px bottom border for rows. Hover state on rows. No vertical borders."
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-terracotta text-white hover:bg-terracotta-hover transition-colors rounded-md px-4 py-2 font-medium shadow-sm data-testid='{role}-btn'",
+      "secondary": "bg-white text-charcoal border border-border-default hover:bg-app-bg transition-colors rounded-md px-4 py-2 font-medium",
+      "ghost": "bg-transparent text-taupe hover:text-charcoal hover:bg-app-bg transition-colors rounded-md px-4 py-2"
+    },
+    "inputs": {
+      "default": "border border-border-default rounded-md px-3 py-2 focus:ring-2 focus:ring-terracotta/20 focus:border-terracotta bg-white text-charcoal placeholder-taupe/50 outline-none transition-all data-testid='{role}-input'"
+    },
+    "cards": {
+      "default": "bg-white border border-border-default rounded-lg p-6 flex flex-col h-full",
+      "kpi": "bg-white border border-border-default rounded-lg p-6 hover:-translate-y-1 hover:shadow-sm transition-all duration-200"
+    },
+    "ai_panel": {
+      "container": "bg-gradient-to-br from-[#F4F2EE] to-[#EAF0F6] border border-border-default rounded-lg p-6",
+      "button": "bg-secondary text-white hover:bg-secondary-hover rounded-md px-4 py-2 flex items-center gap-2 font-medium shadow-sm"
+    }
+  },
+  "animations": {
+    "hover": "Subtle lifts (-translate-y-1) for cards, color transitions (duration-200) for buttons.",
+    "entrance": "Staggered fade-up (opacity 0 to 1, translate-y-4 to 0) for list items and grid cards using framer-motion.",
+    "drag_drop": "Scale up slightly (scale-105) and increase shadow while dragging a kanban card."
+  },
+  "media": {
+    "images": {
+      "auth_background": {
+        "url": "https://images.unsplash.com/photo-1501619438411-47314d5a0580?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzNDR8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMGFyY2hpdGVjdHVyZSUyMHdhcm0lMjBzdW5saWdodHxlbnwwfHx8fDE3ODA5MTQ0NDF8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Abstract architecture with warm sunlight for the login/register page split screen."
+      },
+      "empty_state_dashboard": {
+        "url": "https://images.unsplash.com/photo-1533090161767-e6ffed986c88?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxODF8MHwxfHNlYXJjaHwxfHxtaW5pbWFsaXN0JTIwb2ZmaWNlJTIwZGVzayUyMHBsYW50fGVufDB8fHx8MTc4MDkxNDQ0MXww&ixlib=rb-4.1.0&q=85",
+        "description": "Clean minimalist office desk to be used in 'No upcoming tasks' or welcome empty states."
+      }
+    }
+  },
+  "instructions_to_main_agent": [
+    "Ensure fonts (Outfit, Manrope) are loaded via Google Fonts (@import in css or link in index.html).",
+    "Map colors in tailwind.config.js exactly as specified in the color_palette. e.g. terracotta: '#D96C4A', app-bg: '#F9F8F6', charcoal: '#1C1B1A'.",
+    "Use Shadcn UI components but heavily override classes to remove the 'Vercel-look'. Replace border-border with border-border-default (#E5E2DC). Cards should NOT use heavy drop shadows, rely on 1px borders instead.",
+    "Implement the Kanban board using a robust DnD library (e.g. @dnd-kit/core) making sure columns are horizontally scrollable if needed without visible standard scrollbars.",
+    "AI Panels and Insight Buttons must use the secondary color (#3D405B) for high contrast and to distinguish AI actions from user primary actions (#D96C4A).",
+    "IMPORTANT: Apply `data-testid` explicitly on EVERY interactive component (buttons, inputs, form rows, tabs, kanban cards) following kebab-case, role-based naming."
+  ]
+}
