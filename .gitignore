@@ -85,3 +85,4 @@ frontend/node_modules/.cache/default-development/2.pack
 # Secrets - never commit these
 backend/.env
 frontend/.env
+frontend/node_modules/.cache/default-development/0.pack
